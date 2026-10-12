@@ -1,0 +1,70 @@
+{
+  "name": "NIDS - Network Intrusion Detection System",
+  "version": "1.0.0",
+  "description": "Machine learning-based NIDS using CICIDS2017 dataset. Detects DDoS, Port Scans, Brute Force, and Botnet traffic via binary and multiclass flow-level classification with RF/XGBoost and an optional Autoencoder anomaly detector. Includes Streamlit dashboard.",
+  "tech_stack": [
+    "Python 3.12+",
+    "scikit-learn",
+    "XGBoost",
+    "LightGBM",
+    "imbalanced-learn (SMOTE)",
+    "SHAP",
+    "Streamlit",
+    "pandas / numpy / scipy",
+    "matplotlib / seaborn",
+    "joblib"
+  ],
+  "conventions": [
+    "All scripts accept CLI args via argparse or are importable as modules",
+    "Models saved under models/ as .joblib files",
+    "Processed data saved under data/processed/ as .parquet files",
+    "All hyperparameters stored in config/model_config.yaml",
+    "Logging via Python logging module, not print statements",
+    "Every public function has a numpy-style docstring"
+  ],
+  "architecture_patterns": [
+    "Pipeline pattern: raw CSVs -> preprocessing -> feature engineering -> model training -> evaluation",
+    "Binary detection first, then multiclass extension",
+    "Offline/batch mode primary; live inference as stretch goal"
+  ],
+  "file_structure": {
+    "data/raw": "Original CICIDS2017 CSVs (never modified)",
+    "data/processed": "Cleaned, scaled, encoded parquet files",
+    "notebooks": "EDA and experiment Jupyter notebooks",
+    "src/data": "Data loading, cleaning, preprocessing modules",
+    "src/features": "Feature engineering, selection, SMOTE balancing",
+    "src/models": "Model training, evaluation, serialization",
+    "src/anomaly": "Autoencoder anomaly detection module",
+    "src/dashboard": "Streamlit dashboard app",
+    "src/explainability": "SHAP value computation and visualisation",
+    "models": "Saved model artifacts (.joblib, .keras)",
+    "reports": "Evaluation metrics, confusion matrices, plots",
+    "config": "model_config.yaml, feature_list.yaml",
+    "tests": "Unit tests for preprocessing and model pipeline"
+  },
+  "testing_strategy": {
+    "framework": "pytest",
+    "coverage_target": "70%",
+    "patterns": [
+      "Unit tests for all preprocessing functions",
+      "Integration tests for the full train pipeline",
+      "Smoke tests for dashboard import"
+    ]
+  },
+  "never_do": [
+    "Never use random shuffle for train/test split — always split by time/day",
+    "Never leak test data into preprocessing or scaling fit",
+    "Never commit raw data CSVs to git (add to .gitignore)",
+    "Never use accuracy alone as the evaluation metric",
+    "Never hardcode file paths — use config or argparse"
+  ],
+  "preferred_patterns": [
+    "Use sklearn Pipeline objects to chain preprocessing + model",
+    "Use SMOTE only on training data, never on test data",
+    "Use class_weight='balanced' as baseline before SMOTE",
+    "Use time-based split to avoid temporal leakage",
+    "Use SHAP for all model explanations"
+  ],
+  "sprint_focus": "Phase 1-5: Build complete NIDS pipeline from data loading to trained model evaluation",
+  "sprint_skills": []
+}

@@ -1,0 +1,150 @@
+# ---------------------------------------------------------------------------
+# Model Configuration — NIDS
+# ---------------------------------------------------------------------------
+
+# ── Data ──────────────────────────────────────────────────────────────────
+data:
+  raw_dir: "data/raw"
+  processed_dir: "data/processed"
+  external_dir: "data/external"
+
+  # CICIDS2017 file → day mapping
+  cicids2017_files:
+    Monday-WorkingHours.pcap_ISCX.csv: "benign"
+    Tuesday-WorkingHours.pcap_ISCX.csv: "bruteforce"
+    Wednesday-workingHours.pcap_ISCX.csv: "dos_ddos"
+    Thursday-WorkingHours-Morning-WebAttacks.pcap_ISCX.csv: "webattack"
+    Thursday-WorkingHours-Afternoon-Infilteration.pcap_ISCX.csv: "infiltration"
+    Friday-WorkingHours-Morning.pcap_ISCX.csv: "portscan"
+    Friday-WorkingHours-Afternoon-DDos.pcap_ISCX.csv: "ddos"
+    Friday-WorkingHours-Afternoon-PortScan.pcap_ISCX.csv: "portscan2"
+
+  label_column: " Label"            # Note the leading space — CICIDS2017 quirk
+  benign_label: "BENIGN"
+
+  # Binary label map  (anything that isn't BENIGN → 1)
+  binary_map:
+    BENIGN: 0
+
+  # Multiclass label map
+  multiclass_map:
+    BENIGN: 0
+    FTP-Patator: 1
+    SSH-Patator: 1          # merge brute force variants
+    DoS slowloris: 2
+    DoS Slowhttptest: 2
+    DoS Hulk: 2
+    DoS GoldenEye: 2
+    DDoS: 2
+    Heartbleed: 3
+    Web Attack - Brute Force: 4
+    Web Attack - XSS: 4
+    Web Attack - Sql Injection: 4
+    Infiltration: 5
+    Bot: 6
+    PortScan: 7
+
+  class_names_binary: ["BENIGN", "ATTACK"]
+  class_names_multi:
+    - "BENIGN"
+    - "Brute Force"
+    - "DoS / DDoS"
+    - "Heartbleed"
+    - "Web Attack"
+    - "Infiltration"
+    - "Botnet"
+    - "Port Scan"
+
+# ── Preprocessing ─────────────────────────────────────────────────────────
+preprocessing:
+  drop_columns:
+    - " Flow ID"
+    - " Source IP"
+    - " Source Port"
+    - " Destination IP"
+    - " Timestamp"
+
+  # Columns known to have inf / -inf in CICIDS2017
+  replace_inf: true
+  fill_nan_strategy: "median"    # median | mean | zero
+
+  scaler: "standard"            # standard | minmax | robust
+
+  # Train/test split strategy — NEVER random shuffle
+  split_strategy: "day"         # day | time_fraction
+  test_days:
+    - "Friday-WorkingHours-Morning.pcap_ISCX.csv"
+    - "Friday-WorkingHours-Afternoon-DDos.pcap_ISCX.csv"
+    - "Friday-WorkingHours-Afternoon-PortScan.pcap_ISCX.csv"
+  test_fraction: 0.25           # used only when split_strategy = time_fraction
+
+# ── Imbalance Handling ────────────────────────────────────────────────────
+imbalance:
+  strategy: "class_weight"      # class_weight | smote | undersample | combined
+  smote_k_neighbors: 5
+  undersample_ratio: 0.5        # ratio of minority:majority after under-sampling
+
+# ── Feature Engineering ───────────────────────────────────────────────────
+features:
+  # Derived features to add
+  add_ratios: true              # fwd/bwd packet ratio, bytes/packet etc.
+  variance_threshold: 0.001    # drop near-zero variance features
+  correlation_threshold: 0.98  # drop one of a highly-correlated pair
+
+# ── Models ────────────────────────────────────────────────────────────────
+models:
+  random_forest:
+    n_estimators: 200
+    max_depth: 20
+    min_samples_leaf: 4
+    n_jobs: -1
+    random_state: 42
+
+  xgboost:
+    n_estimators: 300
+    max_depth: 8
+    learning_rate: 0.1
+    subsample: 0.8
+    colsample_bytree: 0.8
+    eval_metric: "logloss"
+    random_state: 42
+    n_jobs: -1
+
+  lightgbm:
+    n_estimators: 300
+    max_depth: 8
+    learning_rate: 0.05
+    num_leaves: 63
+    random_state: 42
+    n_jobs: -1
+
+# ── Autoencoder ───────────────────────────────────────────────────────────
+autoencoder:
+  hidden_dims: [64, 32, 16, 32, 64]
+  epochs: 50
+  batch_size: 256
+  learning_rate: 0.001
+  reconstruction_threshold_percentile: 95   # flag top 5% MSE as anomalous
+  random_state: 42
+
+# ── Evaluation ────────────────────────────────────────────────────────────
+evaluation:
+  metrics:
+    - precision
+    - recall
+    - f1
+    - roc_auc
+    - confusion_matrix
+  primary_metric: "recall"     # optimise hyperparams for attack recall
+  save_plots: true
+  plots_dir: "reports/plots"
+  metrics_dir: "reports/metrics"
+
+# ── Paths ─────────────────────────────────────────────────────────────────
+paths:
+  models_dir: "models"
+  binary_model: "models/binary_classifier.joblib"
+  multiclass_model: "models/multiclass_classifier.joblib"
+  scaler: "models/scaler.joblib"
+  feature_list: "config/feature_list.yaml"
+  autoencoder: "models/autoencoder.keras"
